@@ -23,6 +23,7 @@
             max-width: 800px;
             width: 90%;
             text-align: center;
+            position: relative;
         }
         
         h1 {
@@ -149,55 +150,6 @@
             opacity: 1;
         }
         
-        /* Progress bar styles */
-        .progress-container {
-            margin: 30px auto 20px;
-            width: 400px;
-            max-width: 90%;
-        }
-        
-        .progress-row {
-            display: flex;
-            align-items: center;
-            margin: 8px 0;
-            height: 20px;
-        }
-        
-        .progress-label {
-            font-size: 12px;
-            font-weight: bold;
-            width: 60px;
-            text-align: right;
-            margin-right: 10px;
-        }
-        
-        .progress-bar-wrapper {
-            flex: 1;
-            height: 12px;
-            background-color: #e0e0e0;
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            transition: width 0.3s ease-out;
-            border-radius: 6px;
-        }
-        
-        .progress-bar.user {
-            background-color: #2196F3;
-        }
-        
-        .progress-bar.competitor {
-            background-color: #f44336;
-        }
-        
-        .progress-score {
-            display: none;
-        }
-        
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -224,9 +176,49 @@
             animation: fadeIn 0.3s ease-out, slideIn 0.3s ease-out;
         }
         
-        .response-button.pressed {
-            transform: scale(0.9);
-            opacity: 0.7;
+        .status-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .status-indicator.glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 2px 10px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.5); }
+            50% { box-shadow: 0 2px 10px rgba(0,0,0,0.2), 0 0 30px rgba(255,255,255,0.8); }
+        }
+        
+        .status-winning {
+            background-color: #4CAF50;
+            color: white;
+            border: 2px solid #45a049;
+        }
+        
+        .status-losing {
+            background-color: #f44336;
+            color: white;
+            border: 2px solid #d32f2f;
+        }
+        
+        .status-tied {
+            background-color: #ff9800;
+            color: white;
+            border: 2px solid #f57c00;
+        }
+        
+        .status-neutral {
+            background-color: #2196F3;
+            color: white;
+            border: 2px solid #1976D2;
         }
     </style>
 </head>
@@ -238,7 +230,7 @@
         <!-- Welcome Screen -->
         <div id="welcome" class="screen">
             <h1>Color Response Test</h1>
-            <p>Total Time: ~22 minutes</p>
+            <p>Total Time: ~19 minutes</p>
             <button class="button" onclick="startProtocol()">Start Test</button>
         </div>
         
@@ -292,11 +284,17 @@
                 <button class="response-button" onclick="checkPracticeResponse('yellow')">Y</button>
             </div>
             <div class="feedback" id="practiceFeedback"></div>
+            <div class="status-indicator" id="practiceStatusIndicator" style="display: none;">
+                <span id="practiceStatusText">Status</span>
+            </div>
             <button class="button hidden" id="startTestBtn" onclick="startColorTest()">Begin Color Response Test</button>
         </div>
         
         <!-- Color Response Test Screen -->
         <div id="colorTest" class="screen hidden">
+            <div class="status-indicator" id="statusIndicator" style="display: none;">
+                <span id="statusText">Status</span>
+            </div>
             <h2 id="blockTitle">Color Response - Block 1</h2>
             <div class="timer" id="colorTimer">3:00</div>
             <div class="stroop-word" id="colorWord">READY</div>
@@ -306,25 +304,6 @@
                 <button class="response-button" onclick="checkResponse('blue')">B</button>
                 <button class="response-button" onclick="checkResponse('yellow')">Y</button>
             </div>
-            
-            <!-- Progress bars -->
-            <div class="progress-container">
-                <div class="progress-row">
-                    <div class="progress-label" style="color: #2196F3;">You:</div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar user" id="userProgressBar" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-score" id="userScore">0</div>
-                </div>
-                <div class="progress-row">
-                    <div class="progress-label" style="color: #f44336;">Other:</div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar competitor" id="competitorProgressBar" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-score" id="competitorScore">0</div>
-                </div>
-            </div>
-            
             <div class="feedback" id="feedback"></div>
             <div class="stats">
                 <span>Wrong: <span id="wrong">0</span></span>
@@ -356,8 +335,9 @@
         <!-- Meal Screen -->
         <div id="meal" class="screen hidden">
             <h2>Meal Time</h2>
-            <p>Please consume the entire liquid meal within 5 minutes.</p>
-            <div class="timer" id="mealTimer">5:00</div>
+            <p style="max-width: 500px; margin: 20px auto; line-height: 1.6;">Please drink the entire liquid meal within 5 minutes. Try to pace yourself so that you finish right when the timer reaches 00:00.</p>
+            <button class="button" id="startMealBtn" onclick="startMealTimer()" style="margin-top: 30px;">Start Meal Timer</button>
+            <div class="timer" id="mealTimer" style="display: none;">5:00</div>
         </div>
         
         <!-- Complete Screen -->
@@ -378,15 +358,11 @@
         let currentColor = null;
         let isProcessing = false;
         let practiceStep = 0;
-        let competitorInterval = null;
+        let competitorStats = { correct: 0, wrong: 0 };
         let stats = {
             correct: 0,
             wrong: 0,
             blockStats: []
-        };
-        let competitorStats = {
-            correct: 0,
-            wrong: 0
         };
         
         // Word and color options
@@ -445,6 +421,35 @@
                 word: 'YELLOW',
                 color: 'green',
                 expectedResponse: 'green'
+            },
+            {
+                instruction: "During the test, you'll compete against another participant. This indicator shows who's winning. Click Next to learn more.",
+                showIndicator: true,
+                indicatorDemo: 'neutral',
+                nextButtonOnly: true,
+                hideWord: true,
+                showGlow: true
+            },
+            {
+                instruction: "When the indicator is GREEN like this, it means you're winning with better accuracy than your competitor.",
+                showIndicator: true,
+                indicatorDemo: 'winning',
+                nextButtonOnly: true,
+                hideWord: true
+            },
+            {
+                instruction: "When the indicator is RED like this, it means you're losing - your competitor has better accuracy.",
+                showIndicator: true,
+                indicatorDemo: 'losing',
+                nextButtonOnly: true,
+                hideWord: true
+            },
+            {
+                instruction: "When the indicator is ORANGE like this, it means you're tied with your competitor.",
+                showIndicator: true,
+                indicatorDemo: 'tied',
+                nextButtonOnly: true,
+                hideWord: true
             }
         ];
         
@@ -453,20 +458,82 @@
                 const step = practiceSteps[practiceStep];
                 document.getElementById('practiceInstruction').textContent = step.instruction;
                 const wordElement = document.getElementById('practiceWord');
-                wordElement.textContent = step.word;
-                wordElement.style.color = step.color === 'yellow' ? '#FFD700' : step.color;
-                currentColor = step.expectedResponse;
+                
+                // Handle word display
+                if (step.hideWord) {
+                    wordElement.style.display = 'none';
+                } else {
+                    wordElement.style.display = 'block';
+                    wordElement.textContent = step.word;
+                    wordElement.style.color = step.color === 'yellow' ? '#FFD700' : step.color;
+                    currentColor = step.expectedResponse;
+                }
+                
                 document.getElementById('practiceFeedback').textContent = '';
                 
-                // Ensure buttons are visible and clickable
-                document.getElementById('practiceButtons').style.display = 'block';
-                document.getElementById('practiceWord').style.display = 'block';
+                // Handle performance indicator demonstration
+                const indicator = document.getElementById('practiceStatusIndicator');
+                const statusText = document.getElementById('practiceStatusText');
+                
+                if (step.showIndicator) {
+                    indicator.style.display = 'block';
+                    
+                    switch(step.indicatorDemo) {
+                        case 'neutral':
+                            indicator.className = 'status-indicator status-neutral' + (step.showGlow ? ' glow' : '');
+                            statusText.textContent = 'Performance Indicator';
+                            break;
+                        case 'winning':
+                            indicator.className = 'status-indicator status-winning';
+                            statusText.textContent = '✓ You\'re Winning!';
+                            break;
+                        case 'losing':
+                            indicator.className = 'status-indicator status-losing';
+                            statusText.textContent = '✗ You\'re Losing!';
+                            break;
+                        case 'tied':
+                            indicator.className = 'status-indicator status-tied';
+                            statusText.textContent = '➖ Tied';
+                            break;
+                    }
+                } else {
+                    indicator.style.display = 'none';
+                }
+                
+                // Show appropriate buttons
+                if (step.nextButtonOnly) {
+                    // Hide response buttons, show next button
+                    document.getElementById('practiceButtons').style.display = 'none';
+                    
+                    // Create or show next button if it doesn't exist
+                    let nextBtn = document.getElementById('practiceNextBtn');
+                    if (!nextBtn) {
+                        nextBtn = document.createElement('button');
+                        nextBtn.id = 'practiceNextBtn';
+                        nextBtn.className = 'button';
+                        nextBtn.textContent = 'Next';
+                        nextBtn.onclick = () => {
+                            practiceStep++;
+                            runPracticeStep();
+                        };
+                        document.getElementById('practice').insertBefore(nextBtn, document.getElementById('startTestBtn'));
+                    }
+                    nextBtn.style.display = 'inline-block';
+                } else {
+                    // Show response buttons, hide next button
+                    document.getElementById('practiceButtons').style.display = 'block';
+                    const nextBtn = document.getElementById('practiceNextBtn');
+                    if (nextBtn) nextBtn.style.display = 'none';
+                }
             } else {
                 document.getElementById('practiceInstruction').textContent = "Practice complete. You're ready to begin.";
                 document.getElementById('practiceInstruction').parentElement.classList.add('center');
                 document.getElementById('practiceWord').style.display = 'none';
                 document.getElementById('practiceButtons').style.display = 'none';
                 document.getElementById('practiceFeedback').style.display = 'none';
+                document.getElementById('practiceStatusIndicator').style.display = 'none';
+                const nextBtn = document.getElementById('practiceNextBtn');
+                if (nextBtn) nextBtn.style.display = 'none';
                 document.getElementById('startTestBtn').classList.remove('hidden');
             }
         }
@@ -496,7 +563,7 @@
         function startColorTest() {
             currentBlock = 1;
             stats = { correct: 0, wrong: 0, blockStats: [] };
-            competitorStats = { correct: 0, wrong: 0 };
+            document.getElementById('wrong').textContent = '0';  // Reset the display
             startBlock();
         }
         
@@ -505,98 +572,24 @@
             showScreen('colorTest');
             document.getElementById('blockTitle').textContent = `Color Response - Block ${currentBlock}`;
             
-            // Initialize block stats if not exists
-            if (!stats.blockStats[currentBlock - 1]) {
-                stats.blockStats[currentBlock - 1] = { correct: 0, wrong: 0 };
-            }
-            
-            // Reset competitor stats
+            // Reset block stats
+            stats.blockStats[currentBlock - 1] = { correct: 0, wrong: 0 };
             competitorStats = { correct: 0, wrong: 0 };
-            
             updateStats();
-            updateProgressBars();
+            
+            // Show status indicator
+            document.getElementById('statusIndicator').style.display = 'block';
+            updateStatusIndicator();
             
             // Start timer and word presentation
             startTimer('colorTimer', 3 * 60, () => {
                 endBlock();
             });
             
-            // Start competitor simulation
-            startCompetitorSimulation();
+            // Simulate competitor responses
+            simulateCompetitor();
             
             presentWord();
-        }
-        
-        // Simulate competitor responses
-        function startCompetitorSimulation() {
-            // Clear any existing interval
-            if (competitorInterval) {
-                clearTimeout(competitorInterval);
-                competitorInterval = null;
-            }
-            
-            // Competitor has their own response rhythm
-            const baseResponseTime = 700 + Math.random() * 300; // 700-1000ms base
-            
-            function simulateCompetitorResponse() {
-                // Safety check - ensure we're still in the color test
-                if (!currentScreen || currentScreen !== 'colorTest') {
-                    return;
-                }
-                
-                // Ensure currentBlock is valid
-                if (!currentBlock || currentBlock < 1 || currentBlock > 3) {
-                    return;
-                }
-                
-                // Simulate independent competitor responses
-                const accuracy = Math.max(0.7, 0.88 - ((currentBlock - 1) * 0.03)); // Gets slightly worse with harder blocks
-                if (Math.random() < accuracy) {
-                    competitorStats.correct = (competitorStats.correct || 0) + 1;
-                } else {
-                    competitorStats.wrong = (competitorStats.wrong || 0) + 1;
-                }
-                
-                updateProgressBars();
-                
-                // Schedule next response with variance
-                const nextInterval = baseResponseTime + (Math.random() - 0.5) * 200;
-                competitorInterval = setTimeout(simulateCompetitorResponse, Math.max(500, nextInterval));
-            }
-            
-            // Start the first response
-            competitorInterval = setTimeout(simulateCompetitorResponse, baseResponseTime);
-        }
-        
-        // Update progress bars
-        function updateProgressBars() {
-            // Safety check
-            if (!stats.blockStats[currentBlock - 1]) {
-                return;
-            }
-            
-            const userCorrect = stats.blockStats[currentBlock - 1].correct || 0;
-            
-            // Competitor progresses independently but ensure they're ahead
-            let competitorCorrect = competitorStats.correct || 0;
-            
-            // If competitor is falling behind, give them a boost
-            const minLead = 2 + currentBlock; // Minimum lead increases each block
-            if (competitorCorrect < userCorrect + minLead) {
-                competitorCorrect = userCorrect + minLead + Math.floor(Math.random() * 3);
-                competitorStats.correct = competitorCorrect;
-            }
-            
-            // Scale bars relative to expected max responses in a block
-            const expectedMax = 50;
-            
-            // Update user progress
-            const userWidth = Math.min((userCorrect / expectedMax) * 100, 100);
-            document.getElementById('userProgressBar').style.width = userWidth + '%';
-            
-            // Update competitor progress
-            const competitorWidth = Math.min((competitorCorrect / expectedMax) * 100, 100);
-            document.getElementById('competitorProgressBar').style.width = competitorWidth + '%';
         }
         
         // Present a new word
@@ -635,11 +628,6 @@
         function checkResponse(selectedColor) {
             if (!currentColor || isProcessing) return;
             
-            // Ensure block stats exist
-            if (!stats.blockStats[currentBlock - 1]) {
-                stats.blockStats[currentBlock - 1] = { correct: 0, wrong: 0 };
-            }
-            
             isProcessing = true;
             const feedback = document.getElementById('feedback');
             
@@ -671,7 +659,6 @@
             }
             
             updateStats();
-            updateProgressBars();
             
             // Present next word after a shorter delay
             setTimeout(() => {
@@ -719,20 +706,88 @@
         
         // Update statistics display
         function updateStats() {
-            document.getElementById('wrong').textContent = stats.wrong;
+            // Display only the current block's wrong count
+            document.getElementById('wrong').textContent = stats.blockStats[currentBlock - 1].wrong;
+            updateStatusIndicator();
+        }
+        
+        // Update status indicator
+        function updateStatusIndicator() {
+            if (currentBlock === 0) return;
+            
+            const userTotal = stats.blockStats[currentBlock - 1].correct + stats.blockStats[currentBlock - 1].wrong;
+            const competitorTotal = competitorStats.correct + competitorStats.wrong;
+            
+            const userAccuracy = userTotal > 0 ? (stats.blockStats[currentBlock - 1].correct / userTotal) * 100 : 0;
+            const competitorAccuracy = competitorTotal > 0 ? (competitorStats.correct / competitorTotal) * 100 : 0;
+            
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            if (userTotal === 0 && competitorTotal === 0) {
+                indicator.className = 'status-indicator status-tied';
+                statusText.textContent = '➖ Starting...';
+            } else if (userAccuracy > competitorAccuracy) {
+                indicator.className = 'status-indicator status-winning';
+                statusText.textContent = '✓ You\'re Winning!';
+            } else if (userAccuracy < competitorAccuracy) {
+                indicator.className = 'status-indicator status-losing';
+                statusText.textContent = '✗ You\'re Losing!';
+            } else {
+                indicator.className = 'status-indicator status-tied';
+                statusText.textContent = '➖ Tied';
+            }
+        }
+        
+        // Simulate competitor responses
+        function simulateCompetitor() {
+            // Clear any existing interval
+            if (window.competitorInterval) {
+                clearInterval(window.competitorInterval);
+            }
+            
+            // Competitor responds every 1.6-2.4 seconds (similar to human speed)
+            window.competitorInterval = setInterval(() => {
+                if (currentScreen !== 'colorTest') {
+                    clearInterval(window.competitorInterval);
+                    return;
+                }
+                
+                // Get current user accuracy to stay close
+                const userTotal = stats.blockStats[currentBlock - 1].correct + stats.blockStats[currentBlock - 1].wrong;
+                const userAccuracy = userTotal > 0 ? (stats.blockStats[currentBlock - 1].correct / userTotal) : 0.75;
+                
+                // Dynamic competitor behavior based on time remaining
+                const elapsedTime = 180 - parseInt(document.getElementById('colorTimer').textContent.split(':')[0]) * 60 
+                                        - parseInt(document.getElementById('colorTimer').textContent.split(':')[1]);
+                const timeProgress = elapsedTime / 180; // 0 to 1 over 3 minutes
+                
+                // Start close or even slightly worse, gradually get better
+                // Early: -3% to +3%, Late: +1% to +6%
+                const minOffset = -0.03 + (timeProgress * 0.04); // -3% → +1%
+                const maxOffset = 0.03 + (timeProgress * 0.03);  // +3% → +6%
+                const accuracyOffset = minOffset + Math.random() * (maxOffset - minOffset);
+                
+                const targetAccuracy = Math.min(0.93, Math.max(0.4, userAccuracy + accuracyOffset));
+                const isCorrect = Math.random() < targetAccuracy;
+                
+                if (isCorrect) {
+                    competitorStats.correct++;
+                } else {
+                    competitorStats.wrong++;
+                }
+                
+                updateStatusIndicator();
+            }, 1600 + Math.random() * 800);
         }
         
         // End block
         function endBlock() {
-            // Clear timers
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-            if (competitorInterval) {
-                clearTimeout(competitorInterval);
-                competitorInterval = null;
-            }
+            clearInterval(timer);
+            clearInterval(window.competitorInterval);
+            
+            // Hide status indicator
+            document.getElementById('statusIndicator').style.display = 'none';
             
             // Calculate and display block statistics
             const blockStats = stats.blockStats[currentBlock - 1];
@@ -744,21 +799,38 @@
             document.getElementById('blockWrong').textContent = blockStats.wrong;
             document.getElementById('blockAccuracy').textContent = accuracy;
             
-            // Generate competitor score that's better but believable
-            const competitorTotal = competitorStats.correct + competitorStats.wrong;
+            // Use the simulated competitor stats with final adjustments
             let competitorCorrect = competitorStats.correct;
             let competitorWrong = competitorStats.wrong;
+            let competitorTotal = competitorCorrect + competitorWrong;
             
-            // Ensure competitor final score is appropriately ahead
-            if (competitorTotal < total * 1.1) {
-                // Boost competitor's final numbers if needed
-                const targetTotal = Math.floor(total * (1.1 + Math.random() * 0.1));
-                const targetAccuracy = 0.88;
-                competitorCorrect = Math.floor(targetTotal * targetAccuracy);
-                competitorWrong = targetTotal - competitorCorrect;
+            // Ensure competitor has slightly more responses (5-15% more)
+            const targetTotal = Math.round(total * (1.05 + Math.random() * 0.1));
+            const responsesToAdd = Math.max(0, targetTotal - competitorTotal);
+            
+            // Add the extra responses with good accuracy
+            for (let i = 0; i < responsesToAdd; i++) {
+                if (Math.random() < 0.85) {
+                    competitorCorrect++;
+                } else {
+                    competitorWrong++;
+                }
             }
             
             competitorTotal = competitorCorrect + competitorWrong;
+            
+            // Final check: ensure competitor wins by 2-6% accuracy
+            if (total > 0 && competitorTotal > 0) {
+                const competitorAccuracy = (competitorCorrect / competitorTotal) * 100;
+                const targetAccuracy = Math.min(97, accuracy + 2 + Math.random() * 4);
+                
+                if (competitorAccuracy < targetAccuracy) {
+                    // Adjust to ensure competitor wins by a noticeable margin
+                    competitorCorrect = Math.round((targetAccuracy / 100) * competitorTotal);
+                    competitorWrong = competitorTotal - competitorCorrect;
+                }
+            }
+            
             const competitorAccuracyPercent = competitorTotal > 0 ? Math.round((competitorCorrect / competitorTotal) * 100) : 0;
             
             // Display competitor score
@@ -775,14 +847,24 @@
         function nextBlock() {
             currentBlock++;
             if (currentBlock <= 3) {
+                // Reset the wrong counter display for the new block
+                document.getElementById('wrong').textContent = '0';
                 startBlock();
             } else {
                 // Show meal screen
                 showScreen('meal');
-                startTimer('mealTimer', 5 * 60, () => {
-                    showProtocolComplete();
-                });
             }
+        }
+        
+        // Start meal timer
+        function startMealTimer() {
+            // Hide the start button and show the timer
+            document.getElementById('startMealBtn').style.display = 'none';
+            document.getElementById('mealTimer').style.display = 'block';
+            
+            startTimer('mealTimer', 5 * 60, () => {
+                showProtocolComplete();
+            });
         }
         
         // Show protocol complete
@@ -816,7 +898,6 @@
         // Skip to next section (for testing)
         function skipToNext() {
             clearInterval(timer);
-            clearTimeout(competitorInterval);
             
             switch(currentScreen) {
                 case 'baseline':
@@ -835,7 +916,7 @@
                     nextBlock();
                     break;
                 case 'meal':
-                    showProtocolComplete();
+                    startMealTimer();
                     break;
                 default:
                     break;
