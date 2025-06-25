@@ -238,7 +238,8 @@
         <div id="baseline" class="screen hidden">
             <h2>Resting Baseline</h2>
             <p>Please relax, clear your mind, and sit quietly for five minutes.</p>
-            <div class="timer" id="baselineTimer">5:00</div>
+            <button class="button" id="startBaselineBtn" onclick="startBaselineTimer()">Start Timer</button>
+            <div class="timer" id="baselineTimer" style="display: none;">5:00</div>
         </div>
         
         <!-- Instructions Screen -->
@@ -384,8 +385,30 @@
         // Start protocol
         function startProtocol() {
             showScreen('baseline');
+        }
+        
+        // Start baseline timer
+        function startBaselineTimer() {
+            // Hide the start button and show the timer
+            document.getElementById('startBaselineBtn').style.display = 'none';
+            document.getElementById('baselineTimer').style.display = 'block';
+            
             startTimer('baselineTimer', 5 * 60, () => {
-                showScreen('instructions');
+                // Show next button when timer completes
+                let nextBtn = document.getElementById('baselineNextBtn');
+                if (!nextBtn) {
+                    nextBtn = document.createElement('button');
+                    nextBtn.id = 'baselineNextBtn';
+                    nextBtn.className = 'button';
+                    nextBtn.textContent = 'Next';
+                    nextBtn.style.marginTop = '20px';
+                    nextBtn.onclick = () => {
+                        showScreen('instructions');
+                    };
+                    document.getElementById('baseline').appendChild(nextBtn);
+                } else {
+                    nextBtn.style.display = 'inline-block';
+                }
             });
         }
         
@@ -526,7 +549,13 @@
                     if (nextBtn) nextBtn.style.display = 'none';
                 }
             } else {
-                document.getElementById('practiceInstruction').textContent = "Practice complete. You're ready to begin.";
+                document.getElementById('practiceInstruction').innerHTML = `
+                    <div style="text-align: center;">
+                        <p style="font-size: 18px; margin-bottom: 20px;">Practice complete. You're ready to begin.</p>
+                        <p style="font-size: 48px; color: red; font-weight: bold; margin: 20px 0;">STOP</p>
+                        <p style="font-weight: bold; font-size: 18px; margin-top: 20px;">Now let your research coordinator know you are ready to begin the test.</p>
+                    </div>
+                `;
                 document.getElementById('practiceInstruction').parentElement.classList.add('center');
                 document.getElementById('practiceWord').style.display = 'none';
                 document.getElementById('practiceButtons').style.display = 'none';
@@ -863,7 +892,21 @@
             document.getElementById('mealTimer').style.display = 'block';
             
             startTimer('mealTimer', 5 * 60, () => {
-                showProtocolComplete();
+                // Show next button when timer completes
+                let nextBtn = document.getElementById('mealNextBtn');
+                if (!nextBtn) {
+                    nextBtn = document.createElement('button');
+                    nextBtn.id = 'mealNextBtn';
+                    nextBtn.className = 'button';
+                    nextBtn.textContent = 'Next';
+                    nextBtn.style.marginTop = '20px';
+                    nextBtn.onclick = () => {
+                        showProtocolComplete();
+                    };
+                    document.getElementById('meal').appendChild(nextBtn);
+                } else {
+                    nextBtn.style.display = 'inline-block';
+                }
             });
         }
         
@@ -901,7 +944,12 @@
             
             switch(currentScreen) {
                 case 'baseline':
-                    showScreen('instructions');
+                    // If timer is running, show next button; otherwise start timer
+                    if (document.getElementById('baselineTimer').style.display === 'block') {
+                        showScreen('instructions');
+                    } else {
+                        startBaselineTimer();
+                    }
                     break;
                 case 'instructions':
                     startPractice();
@@ -916,7 +964,12 @@
                     nextBlock();
                     break;
                 case 'meal':
-                    startMealTimer();
+                    // If timer is running, show complete screen; otherwise start timer
+                    if (document.getElementById('mealTimer').style.display === 'block') {
+                        showProtocolComplete();
+                    } else {
+                        startMealTimer();
+                    }
                     break;
                 default:
                     break;
