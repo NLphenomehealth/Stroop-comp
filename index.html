@@ -786,16 +786,28 @@
                 const userTotal = stats.blockStats[currentBlock - 1].correct + stats.blockStats[currentBlock - 1].wrong;
                 const userAccuracy = userTotal > 0 ? (stats.blockStats[currentBlock - 1].correct / userTotal) : 0.75;
                 
-                // Dynamic competitor behavior based on time remaining
-                const elapsedTime = 180 - parseInt(document.getElementById('colorTimer').textContent.split(':')[0]) * 60 
-                                        - parseInt(document.getElementById('colorTimer').textContent.split(':')[1]);
-                const timeProgress = elapsedTime / 180; // 0 to 1 over 3 minutes
+                // Get time remaining
+                const timerText = document.getElementById('colorTimer').textContent;
+                const minutes = parseInt(timerText.split(':')[0]);
+                const seconds = parseInt(timerText.split(':')[1]);
+                const totalSecondsRemaining = minutes * 60 + seconds;
                 
-                // Start close or even slightly worse, gradually get better
-                // Early: -3% to +3%, Late: +1% to +6%
-                const minOffset = -0.03 + (timeProgress * 0.04); // -3% → +1%
-                const maxOffset = 0.03 + (timeProgress * 0.03);  // +3% → +6%
-                const accuracyOffset = minOffset + Math.random() * (maxOffset - minOffset);
+                // Dynamic competitor behavior based on time remaining
+                let accuracyOffset;
+                
+                if (totalSecondsRemaining <= 10) {
+                    // Final 10 seconds: Competitor is always 4-8% better to ensure losing
+                    accuracyOffset = 0.04 + Math.random() * 0.04;
+                } else {
+                    // Rest of the time: Dynamic as before
+                    const elapsedTime = 180 - totalSecondsRemaining;
+                    const timeProgress = elapsedTime / 180;
+                    
+                    // Start close or even slightly worse, gradually get better
+                    const minOffset = -0.03 + (timeProgress * 0.04);
+                    const maxOffset = 0.03 + (timeProgress * 0.03);
+                    accuracyOffset = minOffset + Math.random() * (maxOffset - minOffset);
+                }
                 
                 const targetAccuracy = Math.min(0.93, Math.max(0.4, userAccuracy + accuracyOffset));
                 const isCorrect = Math.random() < targetAccuracy;
