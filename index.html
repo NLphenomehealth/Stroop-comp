@@ -758,7 +758,7 @@
                 competitorWrong = targetTotal - competitorCorrect;
             }
             
-            const competitorTotal = competitorCorrect + competitorWrong;
+            competitorTotal = competitorCorrect + competitorWrong;
             const competitorAccuracyPercent = competitorTotal > 0 ? Math.round((competitorCorrect / competitorTotal) * 100) : 0;
             
             // Display competitor score
